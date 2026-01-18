@@ -5,7 +5,7 @@ Processes solar panel sensor data and generates analytical metrics.
 
 This is the main file you need to complete for the case study.
 
-Author: [Your Name Here]
+Author: Sneha
 """
 
 import csv
@@ -13,38 +13,20 @@ import json
 import statistics
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 
 def validate_data(record: dict) -> bool:
     """
     Validate sensor readings are within acceptable physical ranges.
-    
-    TODO: Implement validation logic
-    
+
     Acceptable ranges for solar panel sensors:
-    - voltage: 18V - 32V (24V nominal system with tolerance)
-    - current: 0A - 12A (10A max with headroom)
-    - temperature: -10°C to 80°C (operational range)
-    - power: Should be >= 0 (calculated from V*I)
-    
-    Args:
-        record: Dictionary with keys: voltage, current, temperature, power
-        
-    Returns:
-        True if all readings are valid, False otherwise
-        
-    Example:
-        >>> validate_data({'voltage': 24.5, 'current': 5.2, 'temperature': 35.0, 'power': 127.4})
-        True
-        >>> validate_data({'voltage': 50.0, 'current': 5.2, 'temperature': 35.0, 'power': 260.0})
-        False
+    - voltage: 18V - 32V
+    - current: 0A - 12A
+    - temperature: -10°C to 80°C
+    - power: >= 0
     """
-    
-    # TODO: Implement validation logic here
-    # Hint: Check each sensor reading against the ranges above
-    # Return False if ANY reading is outside acceptable range
-    
+
     try:
         voltage = float(record["voltage"])
         current = float(record["current"])
@@ -69,42 +51,8 @@ def validate_data(record: dict) -> bool:
 def calculate_metrics(data: List[dict]) -> Dict:
     """
     Calculate comprehensive metrics from sensor data.
-    
-    TODO: Implement metric calculations
-    
-    Required metrics:
-    - For voltage, current, temperature:
-        - average (mean)
-        - minimum
-        - maximum
-        - standard deviation (for voltage only)
-    
-    - Energy metrics:
-        - total_energy_kwh: Sum of (power * time_interval) converted to kWh
-          Assumption: Readings are 5 minutes apart
-        - peak_power_hour: Timestamp of the hour with highest average power
-    
-    Args:
-        data: List of dictionaries, each with validated sensor readings
-        
-    Returns:
-        Dictionary with structure:
-        {
-            "voltage": {"avg": float, "min": float, "max": float, "std": float},
-            "current": {"avg": float, "min": float, "max": float},
-            "temperature": {"avg": float, "min": float, "max": float},
-            "total_energy_kwh": float,
-            "peak_power_hour": str (ISO format timestamp)
-        }
-        
-    Hints:
-    - Use statistics.mean(), min(), max(), statistics.stdev()
-    - For energy: power (W) * time (hours) = energy (Wh), then convert to kWh
-    - For peak hour: group readings by hour, find hour with max average power
     """
-    
-    # TODO: Implement metric calculations here
-    
+
     voltages = [float(r["voltage"]) for r in data]
     currents = [float(r["current"]) for r in data]
     temperatures = [float(r["temperature"]) for r in data]
@@ -117,21 +65,23 @@ def calculate_metrics(data: List[dict]) -> Dict:
     # Peak power hour calculation
     hourly_power = {}
     for r in data:
-        timestamp = datetime.fromisoformat(r["timestamp"])
-        hour = timestamp.replace(minute=0, second=0, microsecond=0)
-        hourly_power.setdefault(hour, []).append(float(r["power"]))
+        if "timestamp" in r:
+            timestamp = datetime.fromisoformat(r["timestamp"])
+            hour = timestamp.replace(minute=0, second=0, microsecond=0)
+            hourly_power.setdefault(hour, []).append(float(r["power"]))
 
-    peak_hour = max(
-        hourly_power.items(),
-        key=lambda item: sum(item[1]) / len(item[1])
-    )[0]
+    peak_hour = (
+        max(hourly_power.items(), key=lambda item: sum(item[1]) / len(item[1]))[0]
+        if hourly_power
+        else None
+    )
 
     return {
         "voltage": {
             "avg": round(statistics.mean(voltages), 2),
             "min": min(voltages),
             "max": max(voltages),
-            "std": round(statistics.stdev(voltages), 2),
+            "std": round(statistics.stdev(voltages), 2) if len(voltages) > 1 else 0.0,
         },
         "current": {
             "avg": round(statistics.mean(currents), 2),
@@ -144,110 +94,65 @@ def calculate_metrics(data: List[dict]) -> Dict:
             "max": max(temperatures),
         },
         "total_energy_kwh": round(total_energy_kwh, 2),
-        "peak_power_hour": peak_hour.isoformat(),
+        "peak_power_hour": peak_hour.isoformat() if peak_hour else None,
     }
 
 
 def process_sensor_data(input_file: str, output_dir: str = "data/processed") -> dict:
     """
     Main processing function - orchestrates the entire data pipeline.
-    
-    TODO: Complete this function
-    
-    Pipeline steps:
-    1. Read CSV file using csv.DictReader
-    2. Validate each record using validate_data()
-    3. Collect valid records, count invalid ones
-    4. Calculate metrics using calculate_metrics()
-    5. Generate output JSON file
-    6. Save to output directory
-    7. Return processing results
-    
-    Args:
-        input_file: Path to input CSV file
-        output_dir: Directory where processed JSON should be saved
-        
-    Returns:
-        Dictionary with processing results:
-        {
-            "input_file": str,
-            "output_file": str,
-            "processed_at": str (ISO timestamp),
-            "status": "success" | "error",
-            "records_processed": int,
-            "records_invalid": int,
-            "metrics": dict (from calculate_metrics),
-            "error": str (optional, only if status is "error")
-        }
-        
-    Error Handling:
-    - If file doesn't exist: return status="error" with error message
-    - If CSV is malformed: return status="error" with error message
-    - If ALL records are invalid: return status="error"
-    - Log errors but continue processing valid records
+
+    Enhancement Option A:
+    - Gracefully handles corrupt / malformed CSV files
+    - Outputs structured error JSON instead of crashing
     """
-    
-    # Initialize result structure
+
     result = {
-        'input_file': Path(input_file).name,
-        'output_file': None,
-        'processed_at': datetime.now().isoformat(),
-        'status': 'pending',
-        'records_processed': 0,
-        'records_invalid': 0,
-        'metrics': {}
+        "input_file": Path(input_file).name,
+        "output_file": None,
+        "processed_at": datetime.utcnow().isoformat(),
+        "status": "pending",
+        "records_processed": 0,
+        "records_invalid": 0,
+        "metrics": {},
     }
-    
-    # TODO: Implement the processing logic
-    
+
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    output_file = output_path / f"{Path(input_file).stem}_result.json"
+
     try:
         input_path = Path(input_file)
-        output_path = Path(output_dir)
 
         if not input_path.exists():
             raise FileNotFoundError(f"Input file not found: {input_file}")
-
-        output_path.mkdir(parents=True, exist_ok=True)
 
         valid_records = []
 
         with input_path.open(newline="") as csvfile:
             reader = csv.DictReader(csvfile)
+
             for row in reader:
-                if validate_data(row):
-                    valid_records.append(row)
-                else:
+                try:
+                    if validate_data(row):
+                        valid_records.append(row)
+                    else:
+                        result["records_invalid"] += 1
+                except Exception:
                     result["records_invalid"] += 1
 
         if not valid_records:
-            raise ValueError("All records are invalid")
+            raise ValueError("No valid records found in CSV")
 
         metrics = calculate_metrics(valid_records)
 
-        output_filename = f"{input_path.stem}_processed.json"
-        output_file = output_path / output_filename
-
-        with output_file.open("w") as f:
-            json.dump(
-                {
-                    "input_file": result["input_file"],
-                    "output_file": output_filename,
-                    "processed_at": result["processed_at"],
-                    "status": "success",
-                    "records_processed": len(valid_records),
-                    "records_invalid": result["records_invalid"],
-                    "metrics": metrics,
-                },
-                f,
-                indent=2,
-            )
-
         result.update(
             {
-                "output_file": output_filename,
                 "status": "success",
                 "records_processed": len(valid_records),
                 "metrics": metrics,
+                "output_file": output_file.name,
             }
         )
 
@@ -255,54 +160,48 @@ def process_sensor_data(input_file: str, output_dir: str = "data/processed") -> 
         result["status"] = "error"
         result["error"] = str(e)
 
+    # Always write output JSON (success OR error)
+    with output_file.open("w") as f:
+        json.dump(result, f, indent=2)
+
     return result
 
 
 def main():
     """
     CLI entry point - processes all CSV files in the incoming directory.
-    
-    This function is already complete - you don't need to modify it.
-    It will use your process_sensor_data() function to process all files.
     """
-    
+
     incoming_dir = Path("data/incoming")
-    
+
     if not incoming_dir.exists():
         print(f"Error: Directory {incoming_dir} does not exist")
         return
-    
+
     csv_files = list(incoming_dir.glob("*.csv"))
-    
+
     if not csv_files:
         print(f"No CSV files found in {incoming_dir}")
         print("Run: python src/data_generator.py")
         return
-    
+
     print("=" * 60)
     print("TARUCCA DATA PROCESSOR")
     print("=" * 60)
-    print(f"Found {len(csv_files)} file(s) to process\n")
-    
-    results = []
-    
+
     for csv_file in csv_files:
         print(f"Processing: {csv_file.name}")
         result = process_sensor_data(str(csv_file))
-        results.append(result)
-        
-        if result['status'] == 'success':
+
+        if result["status"] == "success":
             print(f"Success: {result['records_processed']} records processed")
-            print(f"Output: {result['output_file']}")
-            if result['records_invalid'] > 0:
-                print(f"Warning: {result['records_invalid']} invalid records skipped")
         else:
-            print(f"Error: {result.get('error', 'Unknown error')}")
+            print(f"Error: {result.get('error')}")
+
         print()
-    
-    success_count = sum(1 for r in results if r['status'] == 'success')
+
     print("=" * 60)
-    print(f"SUMMARY: {success_count}/{len(results)} files processed successfully")
+    print("Processing complete")
     print("=" * 60)
 
 

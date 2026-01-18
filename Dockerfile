@@ -18,6 +18,37 @@
 
 FROM python:3.11-slim
 
+# Tarucca Data Processor - Docker Container
+#
+# TODO: Complete this Dockerfile to containerize the processor
+#
+# Requirements:
+# 1. Use Python 3.11-slim as base image for small size
+# 2. Set working directory to /app
+# 3. Copy and install requirements.txt
+# 4. Copy source code
+# 5. Set environment variable PYTHONUNBUFFERED=1 (for proper logging)
+# 6. Define entrypoint to run the processor
+
+FROM python:3.11-slim
+
+# Ensure logs appear immediately
+ENV PYTHONUNBUFFERED=1
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Run the processor
+CMD ["python", "src/processor.py"]
+
+
 # TODO: Your Dockerfile implementation here
 
 # Example structure:
@@ -28,5 +59,3 @@ FROM python:3.11-slim
 # COPY data/ ./data/
 # ENV PYTHONUNBUFFERED=1
 # ...
-
-CMD ["python", "-m", "src.processor"]
