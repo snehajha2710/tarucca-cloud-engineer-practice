@@ -1,0 +1,28 @@
+{
+  "input_file": "sample_solar_data.csv",
+  "output_file": "sample_solar_data_processed.json",
+  "processed_at": "2026-01-18T14:58:28.199501",
+  "status": "success",
+  "records_processed": 281,
+  "records_invalid": 7,
+  "metrics": {
+    "voltage": {
+      "avg": 25.23,
+      "min": 23.52,
+      "max": 28.47,
+      "std": 1.57
+    },
+    "current": {
+      "avg": 3.21,
+      "min": 0.0,
+      "max": 10.28
+    },
+    "temperature": {
+      "avg": 27.92,
+      "min": 18.0,
+      "max": 46.9
+    },
+    "total_energy_kwh": 2.03,
+    "peak_power_hour": "2026-01-15T12:00:00"
+  }
+}
