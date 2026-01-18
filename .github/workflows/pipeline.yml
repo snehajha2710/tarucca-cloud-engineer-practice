@@ -16,50 +16,63 @@
 # - Use actions/upload-artifact@v4 for results
 # - Use docker build and docker run commands
 
+# Tarucca IoT Data Processing Pipeline
+# GitHub Actions workflow for automated event-driven processing
+
 name: IoT Data Processing Pipeline
 
 on:
-  # TODO: Configure trigger for CSV files in data/incoming/
-  # Hint: Use push.paths filter
+  # Trigger when CSV files are added to data/incoming/
   push:
     paths:
-      - 'data/incoming/*.csv'
-  
+      - "data/incoming/*.csv"
+
   # Allow manual trigger for testing
   workflow_dispatch:
 
 jobs:
   process-data:
     runs-on: ubuntu-latest
-    
+
     steps:
+      # 1️⃣ Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      # TODO: Add remaining steps
-      # 
-      # Step 1: Set up Python
-      # - uses: actions/setup-python@v4
-      #   with:
-      #     python-version: '3.11'
-      #
-      # Step 2: Install dependencies
-      # - run: pip install -r requirements.txt
-      #
-      # Step 3: Run tests
-      # - run: pytest tests/ -v
-      #
-      # Step 4: Build Docker image
-      # - run: docker build -t tarucca-processor .
-      #
-      # Step 5: Run processor in container
-      # - run: docker run -v ${{ github.workspace }}/data:/app/data tarucca-processor
-      #
-      # Step 6: Upload processed results
-      # - uses: actions/upload-artifact@v4
-      #   with:
-      #     name: processed-data
-      #     path: data/processed/
-      
+
+      # 2️⃣ Set up Python
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      # 3️⃣ Install dependencies
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # 4️⃣ Run tests
+      - name: Run tests with pytest
+        run: |
+          pytest tests/ -v
+
+      # 5️⃣ Build Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t tarucca-processor .
+
+      # 6️⃣ Run processor in Docker container
+      - name: Run data processor
+        run: |
+          docker run \
+            -v ${{ github.workspace }}/data:/app/data \
+            tarucca-processor
+
+      # 7️⃣ Upload processed results as artifacts
+      - name: Upload processed results
+        uses: actions/upload-artifact@v4
+        with:
+          name: processed-data
+          path: data/processed/*.json
+
       - name: Pipeline status
         run: echo "✅ Pipeline completed successfully"
